@@ -1,6 +1,8 @@
 package com.expenseTracker.auth.service;
 
 import com.expenseTracker.auth.model.User;
+import com.expenseTracker.auth.events.UserEvent;
+import com.expenseTracker.auth.events.UserEventPublisher;
 import com.expenseTracker.auth.model.Role;
 import com.expenseTracker.auth.repository.UserRepository;
 import com.expenseTracker.auth.util.JwtUtil;
@@ -16,15 +18,16 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class AuthService {
-
     private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
-
     @Autowired
     private UserRepository userRepository;
-
     @Autowired
     private PasswordEncoder passwordEncoder;
+    @Autowired
+    private UserEventPublisher eventPublisher;
 
+
+    
     @Autowired
     private JwtUtil jwtUtil;
 
@@ -34,13 +37,13 @@ public class AuthService {
             User user = userOpt.get();
             if (passwordEncoder.matches(password, user.getPassword())) {
                 String token = jwtUtil.generateToken(user);
-                logger.info("✅ Token generated for user: {}", username);
+                logger.info("Token generated for user: {}", username);
                 return Optional.of(token);
             } else {
-                logger.warn("❌ Incorrect password for user: {}", username);
+                logger.warn("Incorrect password for user: {}", username);
             }
         } else {
-            logger.warn("❌ User not found: {}", username);
+            logger.warn("User not found: {}", username);
         }
 
         return Optional.empty();
@@ -50,6 +53,12 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setRole(Role.USER);
         User savedUser = userRepository.save(user);
+        UserEvent userEvent = new UserEvent(
+        		savedUser.getId(),
+        		savedUser.getUsername(),
+        		savedUser.getPassword(),
+        		savedUser.getRole());
+        eventPublisher.publishUserEvent(userEvent);
         logger.info("New USER registered: {}", savedUser.getUsername());
         return savedUser;
     }
@@ -58,6 +67,12 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setRole(Role.ADMIN);
         User savedAdmin = userRepository.save(user);
+        UserEvent userEvent = new UserEvent(
+        		savedAdmin.getId(),
+        		savedAdmin.getUsername(),
+        		savedAdmin.getPassword(),
+        		savedAdmin.getRole());
+        eventPublisher.publishUserEvent(userEvent);
         logger.info("New ADMIN registered: {}", savedAdmin.getUsername());
         return savedAdmin;
     }

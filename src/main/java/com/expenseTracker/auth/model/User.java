@@ -49,6 +49,9 @@ public class User {
 	}
 	public Role getRole() { return role; }
     public void setRole(Role role) { this.role = role; }
+    
+    public boolean isAdmin() {
+    	return Role.ADMIN.equals(this.role); }
 	
 
 }
